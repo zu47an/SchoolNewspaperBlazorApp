@@ -6,31 +6,32 @@ namespace SchoolNewspaperBlazorApp.Repository
 {
     public class AuthRepository : IAuthRepository
     {
-        private readonly NewspaperDbContext _context;
-        public AuthRepository(NewspaperDbContext context)
+        private readonly IDbContextFactory<NewspaperDbContext> _contextFactory;
+        public AuthRepository(IDbContextFactory<NewspaperDbContext> context)
         {
-            _context = context;
+            _contextFactory = context;
         }
 
         public async Task AddUserAsync(User user)
         {
+            await using var _context = await _contextFactory.CreateDbContextAsync();
             await _context.Users.AddAsync(user);
             await _context.SaveChangesAsync();
         }
-        public async Task<bool> CheckIfRegisteredAsync(string login, string password)
+        public async Task<string> CheckIfRegisteredAsync(string login)
         {
-            var exist = await _context.Users
-                .AnyAsync(u => u.Email == login &&
-                u.Password == password);
-            if(exist)
+            await using var _context = await _contextFactory.CreateDbContextAsync();
+            var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.Email == login);
+            if (user != null)
             {
-                return true;
+                return user.Password;
             }
             else
             {
-                return false;
+                throw new Exception("Konto nie istnieje.");
             }
         }
     }
 }
-    
+
